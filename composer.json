@@ -27,5 +27,9 @@
     },
     "scripts": {
         "test": "pest"
+    },
+    "support": {
+        "issues": "https://github.com/shufflingpixels/php-io/issues",
+        "source": "https://github.com/shufflingpixels/php-io"
     }
 }
