@@ -1,0 +1,31 @@
+{
+    "name": "shufflingpixels/php-io",
+    "description": "A small, focused PHP I/O toolkit for working with streams and binary data.",
+    "type": "library",
+    "license": "AGPL-3.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "Shufflingpixels\\IO\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Henrik Hautakoski",
+            "email": "henrik@shufflingpixels.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "test": "pest"
+    }
+}

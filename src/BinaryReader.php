@@ -1,0 +1,123 @@
+<?php
+
+namespace Shufflingpixels\IO;
+
+use InvalidArgumentException;
+use RuntimeException;
+
+class BinaryReader
+{
+    public function __construct(protected StreamInterface $stream)
+    {
+    }
+
+    public static function stream(StreamInterface $stream)
+    {
+        return new self($stream);
+    }
+
+    public static function string(string $data)
+    {
+        return self::stream(new Buffer($data));
+    }
+
+    public function length() : int
+    {
+        return $this->stream->length();
+    }
+
+    public function tell() : int
+    {
+        return $this->stream->tell();
+    }
+
+    public function eof() : bool
+    {
+        return $this->stream->eof();
+    }
+
+    public function seek(int $position, SeekMode $mode = SeekMode::SET)
+    {
+        $this->stream->seek($position, $mode);
+    }
+
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \RuntimeException
+     */
+    public function read(int $length): string
+    {
+        if ($length < 0) {
+            throw new InvalidArgumentException('Length must be >= 0');
+        }
+
+        $data = $this->stream->read($length);
+        if (\strlen($data) !== $length) {
+            throw new RuntimeException(
+                "Not enough bytes to read {$length} byte(s), " . \strlen($data) . ' read'
+            );
+        }
+
+        return $data;
+    }
+
+    public function readUInt8(): int
+    {
+        return \ord($this->read(1));
+    }
+
+    public function readInt8(): int
+    {
+        $value = $this->readUInt8();
+
+        return $value >= 0x80 ? $value - 0x100 : $value;
+    }
+
+    public function readUInt16LE(): int
+    {
+        return \unpack('v', $this->read(2))[1];
+    }
+
+    public function readUInt16BE(): int
+    {
+        return \unpack('n', $this->read(2))[1];
+    }
+
+    public function readInt16LE(): int
+    {
+        $value = $this->readUInt16LE();
+
+        return $value >= 0x8000 ? $value - 0x10000 : $value;
+    }
+
+    public function readInt16BE(): int
+    {
+        $value = $this->readUInt16BE();
+
+        return $value >= 0x8000 ? $value - 0x10000 : $value;
+    }
+
+    public function readUInt32LE(): int
+    {
+        return \unpack('V', $this->read(4))[1];
+    }
+
+    public function readUInt32BE(): int
+    {
+        return \unpack('N', $this->read(4))[1];
+    }
+
+    public function readInt32LE(): int
+    {
+        $value = $this->readUInt32LE();
+
+        return $value >= 0x80000000 ? $value - 0x100000000 : $value;
+    }
+
+    public function readInt32BE(): int
+    {
+        $value = $this->readUInt32BE();
+
+        return $value >= 0x80000000 ? $value - 0x100000000 : $value;
+    }
+}
