@@ -15,11 +15,11 @@ it('reads, writes, seeks and reports stream state', function () {
         }
     };
 
-    expect($stream->length())->toBe(5)
+    expect($stream->getSize())->toBe(5)
         ->and($stream->tell())->toBe(0)
         ->and($stream->isSeekable())->toBeTrue()
         ->and($stream->isReadable())->toBeTrue()
-        ->and($stream->isWriteable())->toBeTrue()
+        ->and($stream->isWritable())->toBeTrue()
         ->and($stream->read(2))->toBe('he');
 
     $stream->seek(0);
@@ -27,7 +27,7 @@ it('reads, writes, seeks and reports stream state', function () {
 
     $stream->seek(0);
     expect($stream->read(5))->toBe('Hello')
-        ->and($stream->length())->toBe(5)
+        ->and($stream->getSize())->toBe(5)
         ->and($stream->eof())->toBeFalse();
 
     $stream->read(1);
@@ -46,7 +46,7 @@ it('throws when seeking or getting length on non-seekable stream', function () {
         }
     };
 
-    expect(fn () => $stream->length())->toThrow(IOException::class)
+    expect($stream->getSize())->toBeNull()
         ->and(fn () => $stream->seek(0))->toThrow(IOException::class);
 
     $stream->close();

@@ -4,11 +4,13 @@ namespace Shufflingpixels\IO;
 
 use InvalidArgumentException;
 use OutOfBoundsException;
-use Shufflingpixels\IO\Exception\EndOfStreamException;
+use Psr\Http\Message\StreamInterface;
+use RuntimeException;
 
 class Buffer implements StreamInterface
 {
     private int $position = 0;
+    private bool $detached = false;
 
     public function __construct(protected string $data)
     {
@@ -16,6 +18,25 @@ class Buffer implements StreamInterface
 
     public function close(): void
     {
+        $this->detach();
+    }
+
+    public function detach(): mixed
+    {
+        if ($this->detached) {
+            return null;
+        }
+
+        $this->detached = true;
+        $this->data = '';
+        $this->position = 0;
+
+        return null;
+    }
+
+    public function getSize(): ?int
+    {
+        return $this->detached ? null : $this->length();
     }
 
     public function length(): int
@@ -25,6 +46,10 @@ class Buffer implements StreamInterface
 
     public function remaining() : int
     {
+        if ($this->detached) {
+            return 0;
+        }
+
         return $this->length() - $this->position;
     }
 
@@ -35,6 +60,8 @@ class Buffer implements StreamInterface
 
     public function tell() : int
     {
+        $this->ensureAttached();
+
         return $this->position;
     }
 
@@ -43,20 +70,27 @@ class Buffer implements StreamInterface
         return true;
     }
 
-    public function seek(int $offset, SeekMode $mode = SeekMode::SET): void
+    public function seek(int $offset, int $whence = SEEK_SET): void
     {
-        $position = match($mode) {
-            SeekMode::SET => $offset,
-            SeekMode::CUR => $this->position + $offset,
-            SeekMode::END => $this->length() + $offset,
+        $this->ensureAttached();
+
+        $position = match($whence) {
+            SEEK_SET => $offset,
+            SEEK_CUR => $this->position + $offset,
+            SEEK_END => $this->length() + $offset,
             default => throw new InvalidArgumentException("Invalid seek mode")
         };
 
-        if ($position > $this->length()) {
+        if ($position < 0 || $position > $this->length()) {
             throw new OutOfBoundsException("Seek position out of bounds: {$position}");
         }
 
         $this->position = $position;
+    }
+
+    public function rewind(): void
+    {
+        $this->seek(0);
     }
 
     public function isReadable(): bool
@@ -66,30 +100,37 @@ class Buffer implements StreamInterface
 
     public function read(int $length): string
     {
+        $this->ensureAttached();
+
         if ($length < 0) {
             throw new InvalidArgumentException("Length must be >= 0");
         }
 
-        if ($this->remaining() < $length) {
-            throw new EndOfStreamException(
-                "Not enough bytes to read {$length} byte(s), {$this->remaining()} remaining"
-            );
+        if ($length === 0 || $this->eof()) {
+            return '';
         }
 
-        $result = substr($this->data, $this->position, $length);
-        $this->position += $length;
+        $result = substr($this->data, $this->position, min($length, $this->remaining()));
+        $this->position += strlen($result);
 
         return $result;
     }
 
-    public function isWriteable(): bool
+    public function isWritable(): bool
     {
         return true;
     }
 
-    public function write(string $data): int
+    public function isWriteable(): bool
     {
-        $length = \strlen($data);
+        return $this->isWritable();
+    }
+
+    public function write(string $string): int
+    {
+        $this->ensureAttached();
+
+        $length = \strlen($string);
 
         if ($length === 0) {
             return 0;
@@ -101,9 +142,51 @@ class Buffer implements StreamInterface
             ? \substr($this->data, $suffixStart)
             : '';
 
-        $this->data = $prefix . $data . $suffix;
+        $this->data = $prefix . $string . $suffix;
         $this->position += $length;
 
         return $length;
+    }
+
+    public function getContents(): string
+    {
+        $this->ensureAttached();
+
+        if ($this->eof()) {
+            return '';
+        }
+
+        $result = substr($this->data, $this->position);
+        $this->position = $this->length();
+
+        return $result;
+    }
+
+    public function getMetadata(?string $key = null): mixed
+    {
+        $metadata = [
+            'seekable' => true,
+            'readable' => true,
+            'writable' => true,
+            'uri' => null,
+        ];
+
+        return $key !== null ? $metadata[$key] ?? null : $metadata;
+    }
+
+    public function __toString(): string
+    {
+        if ($this->detached) {
+            return '';
+        }
+
+        return $this->data;
+    }
+
+    private function ensureAttached(): void
+    {
+        if ($this->detached) {
+            throw new RuntimeException('Stream is detached');
+        }
     }
 }

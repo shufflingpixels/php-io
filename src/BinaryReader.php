@@ -3,6 +3,7 @@
 namespace Shufflingpixels\IO;
 
 use InvalidArgumentException;
+use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 
 class BinaryReader
@@ -23,7 +24,12 @@ class BinaryReader
 
     public function length() : int
     {
-        return $this->stream->length();
+        $size = $this->stream->getSize();
+        if ($size === null) {
+            throw new RuntimeException('Stream size is not known');
+        }
+
+        return $size;
     }
 
     public function tell() : int
@@ -36,9 +42,9 @@ class BinaryReader
         return $this->stream->eof();
     }
 
-    public function seek(int $position, SeekMode $mode = SeekMode::SET)
+    public function seek(int $position, int $whence = SEEK_SET): void
     {
-        $this->stream->seek($position, $mode);
+        $this->stream->seek($position, $whence);
     }
 
     /**

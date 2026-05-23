@@ -2,6 +2,7 @@
 
 namespace Shufflingpixels\IO;
 
+use Psr\Http\Message\StreamInterface;
 use Shufflingpixels\IO\Exception\IOException;
 
 abstract class Resource implements StreamInterface
@@ -21,13 +22,24 @@ abstract class Resource implements StreamInterface
 
     public function close(): void
     {
-        fclose($this->resource);
+        if ($this->resource !== null) {
+            fclose($this->resource);
+            $this->resource = null;
+        }
     }
 
-    public function length() : int
+    public function detach(): mixed
+    {
+        $resource = $this->resource;
+        $this->resource = null;
+
+        return $resource;
+    }
+
+    public function getSize(): ?int
     {
         if (!$this->isSeekable()) {
-            throw new IOException("Unable to get length on a non-seekable stream");
+            return null;
         }
 
         if ($this->size === null) {
@@ -56,13 +68,13 @@ abstract class Resource implements StreamInterface
         return ftell($this->resource);
     }
 
-    public function seek(int $position, SeekMode $mode = SeekMode::SET): void
+    public function seek(int $position, int $whence = SEEK_SET): void
     {
         if (!$this->isSeekable()) {
             throw new IOException("Unable to seek on a non-seekable stream");
         }
 
-        if (fseek($this->resource, $position, $mode->value) < 0) {
+        if (fseek($this->resource, $position, $whence) < 0) {
             throw new IOException("Unable to seek to the given position");
         }
     }
@@ -77,23 +89,50 @@ abstract class Resource implements StreamInterface
         return fread($this->resource, $length);
     }
 
-    public function isWriteable(): bool
+    public function isWritable(): bool
     {
         return $this->writeable;
     }
 
-    public function write(string $data): int
+    public function isWriteable(): bool
+    {
+        return $this->isWritable();
+    }
+
+    public function write(string $string): int
     {
         if (!$this->writeable) {
             throw new IOException("Stream is not writeable");
         }
 
-        $result = fwrite($this->resource, $data);
+        $result = fwrite($this->resource, $string);
         if ($result === false) {
             throw new IOException("Failed to write to stream");
         }
 
         $this->size = null;
         return $result;
+    }
+
+    public function rewind(): void
+    {
+        $this->seek(0);
+    }
+
+    public function getContents(): string
+    {
+        return (string) stream_get_contents($this->resource);
+    }
+
+    public function getMetadata(?string $key = null): mixed
+    {
+        $data = stream_get_meta_data($this->resource);
+
+        return $key !== null ? $data[$key] ?? null : $data;
+    }
+
+    public function __toString(): string
+    {
+        return $this->getContents();
     }
 }

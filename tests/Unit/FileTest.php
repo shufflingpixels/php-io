@@ -11,8 +11,8 @@ it('opens readable files and reads contents', function () {
     $file = File::open($path, FileMode::READ);
 
     expect($file->isReadable())->toBeTrue()
-        ->and($file->isWriteable())->toBeFalse()
-        ->and($file->length())->toBe(5)
+        ->and($file->isWritable())->toBeFalse()
+        ->and($file->getSize())->toBe(5)
         ->and($file->read(5))->toBe('hello');
 
     $file->close();
@@ -27,7 +27,7 @@ it('opens read-write files and persists writes', function () {
     $file->seek(0);
 
     expect($file->isReadable())->toBeTrue()
-        ->and($file->isWriteable())->toBeTrue()
+        ->and($file->isWritable())->toBeTrue()
         ->and($file->write('X'))->toBe(1);
 
     $file->seek(0);
@@ -44,8 +44,8 @@ it('opens write mode files and truncates existing contents', function () {
     $file = File::open($path, FileMode::WRITE);
 
     expect($file->isReadable())->toBeFalse()
-        ->and($file->isWriteable())->toBeTrue()
-        ->and($file->length())->toBe(0)
+        ->and($file->isWritable())->toBeTrue()
+        ->and($file->getSize())->toBe(0)
         ->and($file->write('xy'))->toBe(2);
 
     $file->close();

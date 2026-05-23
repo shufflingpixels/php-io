@@ -2,8 +2,6 @@
 
 use Shufflingpixels\IO\BinaryReader;
 use Shufflingpixels\IO\Buffer;
-use Shufflingpixels\IO\SeekMode;
-use Shufflingpixels\IO\StreamInterface;
 
 it('creates reader from stream and string helpers', function () {
     $streamReader = BinaryReader::stream(new Buffer('abc'));
@@ -24,7 +22,7 @@ it('proxies length tell eof and seek', function () {
     expect($reader->tell())->toBe(2)
         ->and($reader->read(1))->toBe('c');
 
-    $reader->seek(-1, SeekMode::END);
+    $reader->seek(-1, SEEK_END);
     expect($reader->read(1))->toBe('d')
         ->and($reader->eof())->toBeTrue();
 });
@@ -36,17 +34,22 @@ it('throws for negative read length', function () {
 });
 
 it('throws when stream returns fewer bytes than requested', function () {
-    $stream = new class implements StreamInterface {
+    $stream = new class implements \Psr\Http\Message\StreamInterface {
+        public function __toString(): string { return ''; }
         public function close(): void {}
+        public function detach(): mixed { return null; }
+        public function getSize(): ?int { return 0; }
         public function eof(): bool { return false; }
-        public function length(): int { return 0; }
         public function isSeekable(): bool { return false; }
-        public function seek(int $position, Shufflingpixels\IO\SeekMode $mode = Shufflingpixels\IO\SeekMode::SET): void {}
+        public function seek(int $position, int $whence = SEEK_SET): void {}
+        public function rewind(): void {}
         public function tell(): int { return 0; }
+        public function isWritable(): bool { return false; }
+        public function write(string $string): int { return 0; }
         public function isReadable(): bool { return true; }
         public function read(int $length): string { return 'x'; }
-        public function isWriteable(): bool { return false; }
-        public function write($data): int { return 0; }
+        public function getContents(): string { return ''; }
+        public function getMetadata(?string $key = null): mixed { return null; }
     };
 
     $reader = BinaryReader::stream($stream);
