@@ -82,3 +82,41 @@ it('reads 32 bit integers in little and big endian', function () {
         ->and($reader->readInt32LE())->toBe(-2147483648)
         ->and($reader->readInt32BE())->toBe(-1);
 });
+
+it('reads a padded string with no padding present', function () {
+    $reader = BinaryReader::string('hello');
+
+    expect($reader->readPaddedString(5))->toBe('hello');
+});
+
+it('strips null bytes from the end of a padded string', function () {
+    $reader = BinaryReader::string("hello\x00\x00\x00");
+
+    expect($reader->readPaddedString(8))->toBe('hello');
+});
+
+it('returns empty string for an all-null padded string', function () {
+    $reader = BinaryReader::string("\x00\x00\x00");
+
+    expect($reader->readPaddedString(3))->toBe('');
+});
+
+it('advances the cursor by the full field length after readPaddedString', function () {
+    $reader = BinaryReader::string("hi\x00\x00" . 'end');
+
+    $reader->readPaddedString(4);
+
+    expect($reader->read(3))->toBe('end');
+});
+
+it('throws when not enough bytes remain for readPaddedString', function () {
+    $reader = BinaryReader::string('ab');
+
+    expect(fn () => $reader->readPaddedString(5))->toThrow(RuntimeException::class, 'Not enough bytes');
+});
+
+it('strips custom padding characters from the end of a padded string', function () {
+    $reader = BinaryReader::string("hello   ");
+
+    expect($reader->readPaddedString(8, ' '))->toBe('hello');
+});

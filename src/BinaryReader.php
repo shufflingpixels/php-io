@@ -129,4 +129,13 @@ class BinaryReader
 
         return $value >= 0x8000_0000 ? $value - 0x1_0000_0000 : $value;
     }
+
+    /**
+     * Reads a string of fixed length, trimming any padding characters from the end.
+     */
+    public function readPaddedString(int $length, string $pad_chars = "\x00") : string
+    {
+        $data = $this->read($length);
+        return rtrim($data, $pad_chars);
+    }
 }
