@@ -3,16 +3,8 @@
 use Shufflingpixels\IO\BinaryReader;
 use Shufflingpixels\IO\Buffer;
 
-it('creates reader from stream and string helpers', function () {
-    $streamReader = BinaryReader::stream(new Buffer('abc'));
-    $stringReader = BinaryReader::string('xyz');
-
-    expect($streamReader)->toBeInstanceOf(BinaryReader::class)
-        ->and($stringReader->read(3))->toBe('xyz');
-});
-
 it('proxies length tell eof and seek', function () {
-    $reader = BinaryReader::string('abcd');
+    $reader = new BinaryReader(new Buffer('abcd'));
 
     expect($reader->length())->toBe(4)
         ->and($reader->tell())->toBe(0)
@@ -28,7 +20,7 @@ it('proxies length tell eof and seek', function () {
 });
 
 it('throws for negative read length', function () {
-    $reader = BinaryReader::string('abc');
+    $reader = new BinaryReader(new Buffer('abc'));
 
     expect(fn () => $reader->read(-1))->toThrow(InvalidArgumentException::class);
 });
@@ -52,13 +44,13 @@ it('throws when stream returns fewer bytes than requested', function () {
         public function getMetadata(?string $key = null): mixed { return null; }
     };
 
-    $reader = BinaryReader::stream($stream);
+    $reader = new BinaryReader(new Buffer($stream));
 
     expect(fn () => $reader->read(2))->toThrow(RuntimeException::class, 'Not enough bytes');
 });
 
 it('reads 8 bit integers', function () {
-    $reader = BinaryReader::string("\x7f\x80\xff");
+    $reader = new BinaryReader(new Buffer("\x7f\x80\xff"));
 
     expect($reader->readUInt8())->toBe(127)
         ->and($reader->readInt8())->toBe(-128)
@@ -66,7 +58,7 @@ it('reads 8 bit integers', function () {
 });
 
 it('reads 16 bit integers in little and big endian', function () {
-    $reader = BinaryReader::string(pack('v', 0x1234) . pack('n', 0x5678) . pack('v', 0x8000) . pack('n', 0xffff));
+    $reader = new BinaryReader(new Buffer(pack('v', 0x1234) . pack('n', 0x5678) . pack('v', 0x8000) . pack('n', 0xffff)));
 
     expect($reader->readUInt16LE())->toBe(0x1234)
         ->and($reader->readUInt16BE())->toBe(0x5678)
@@ -75,7 +67,7 @@ it('reads 16 bit integers in little and big endian', function () {
 });
 
 it('reads 32 bit integers in little and big endian', function () {
-    $reader = BinaryReader::string(pack('V', 0x12345678) . pack('N', 0x10203040) . pack('V', 0x80000000) . pack('N', 0xffffffff));
+    $reader = new BinaryReader(new Buffer(pack('V', 0x12345678) . pack('N', 0x10203040) . pack('V', 0x80000000) . pack('N', 0xffffffff)));
 
     expect($reader->readUInt32LE())->toBe(0x12345678)
         ->and($reader->readUInt32BE())->toBe(0x10203040)
@@ -84,25 +76,25 @@ it('reads 32 bit integers in little and big endian', function () {
 });
 
 it('reads a padded string with no padding present', function () {
-    $reader = BinaryReader::string('hello');
+    $reader = new BinaryReader(new Buffer('hello'));
 
     expect($reader->readPaddedString(5))->toBe('hello');
 });
 
 it('strips null bytes from the end of a padded string', function () {
-    $reader = BinaryReader::string("hello\x00\x00\x00");
+    $reader = new BinaryReader(new Buffer("hello\x00\x00\x00"));
 
     expect($reader->readPaddedString(8))->toBe('hello');
 });
 
 it('returns empty string for an all-null padded string', function () {
-    $reader = BinaryReader::string("\x00\x00\x00");
+    $reader = new BinaryReader(new Buffer("\x00\x00\x00"));
 
     expect($reader->readPaddedString(3))->toBe('');
 });
 
 it('advances the cursor by the full field length after readPaddedString', function () {
-    $reader = BinaryReader::string("hi\x00\x00" . 'end');
+    $reader = new BinaryReader(new Buffer("hi\x00\x00" . 'end'));
 
     $reader->readPaddedString(4);
 
@@ -110,13 +102,13 @@ it('advances the cursor by the full field length after readPaddedString', functi
 });
 
 it('throws when not enough bytes remain for readPaddedString', function () {
-    $reader = BinaryReader::string('ab');
+    $reader = new BinaryReader(new Buffer('ab'));
 
     expect(fn () => $reader->readPaddedString(5))->toThrow(RuntimeException::class, 'Not enough bytes');
 });
 
 it('strips custom padding characters from the end of a padded string', function () {
-    $reader = BinaryReader::string("hello   ");
+    $reader = new BinaryReader(new Buffer("hello   "));
 
     expect($reader->readPaddedString(8, ' '))->toBe('hello');
 });

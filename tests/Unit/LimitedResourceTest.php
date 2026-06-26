@@ -302,7 +302,7 @@ it('integrates with BinaryReader for binary reads from a scoped section', functi
     $buffer = new Buffer($data);
 
     $limited = new LimitedResource($buffer, 4, 4);
-    $reader  = BinaryReader::stream($limited);
+    $reader  = new BinaryReader($limited);
 
     expect($reader->length())->toBe(4)
         ->and($reader->readUInt32LE())->toBe($value);
@@ -314,7 +314,7 @@ it('BinaryReader seek works within the window', function () {
     $buffer = new Buffer($data);
 
     $limited = new LimitedResource($buffer, 8, 4);
-    $reader  = BinaryReader::stream($limited);
+    $reader  = new BinaryReader($limited);
 
     $first = $reader->readUInt32LE();
     $reader->seek(0);

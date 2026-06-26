@@ -15,16 +15,6 @@ class BinaryReader
     {
     }
 
-    public static function stream(StreamInterface $stream)
-    {
-        return new self($stream);
-    }
-
-    public static function string(string $data)
-    {
-        return self::stream(new Buffer($data));
-    }
-
     public function length() : int
     {
         $size = $this->stream->getSize();
