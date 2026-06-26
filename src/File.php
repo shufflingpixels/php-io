@@ -29,6 +29,6 @@ class File extends Resource
             throw new IOException("Unable to open file");
         }
 
-        return new self($fd, $mode->seekable(), $mode->readable(), $mode->writeable());
+        return new self($fd, $mode->seekable(), $mode->readable(), $mode->writable());
     }
 }

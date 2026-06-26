@@ -28,7 +28,7 @@ enum FileMode : string
         return $this === self::READ || $this === self::RW;
     }
 
-    public function writeable(): bool
+    public function writable(): bool
     {
         return $this === self::WRITE || $this === self::RW;
     }

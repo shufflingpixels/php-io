@@ -10,10 +10,10 @@ it('defines expected fopen mode values', function () {
 
 it('reports read and write capabilities for each mode', function () {
     expect(FileMode::READ->readable())->toBeTrue()
-        ->and(FileMode::READ->writeable())->toBeFalse()
+        ->and(FileMode::READ->writable())->toBeFalse()
         ->and(FileMode::WRITE->readable())->toBeFalse()
-        ->and(FileMode::WRITE->writeable())->toBeTrue()
+        ->and(FileMode::WRITE->writable())->toBeTrue()
         ->and(FileMode::RW->readable())->toBeTrue()
-        ->and(FileMode::RW->writeable())->toBeTrue()
+        ->and(FileMode::RW->writable())->toBeTrue()
         ->and(FileMode::READ->seekable())->toBeTrue();
 });
