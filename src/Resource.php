@@ -25,7 +25,7 @@ abstract class Resource implements StreamInterface
         protected mixed $resource,
         protected bool $seekable,
         protected bool $readable,
-        protected bool $writeable)
+        protected bool $writable)
     {
     }
 
@@ -135,7 +135,7 @@ abstract class Resource implements StreamInterface
      */
     public function isWritable(): bool
     {
-        return $this->writeable;
+        return $this->writable;
     }
 
     /**
@@ -147,7 +147,7 @@ abstract class Resource implements StreamInterface
      */
     public function write(string $string): int
     {
-        if (!$this->writeable) {
+        if (!$this->writable) {
             throw new IOException("Stream is not writeable");
         }
 
