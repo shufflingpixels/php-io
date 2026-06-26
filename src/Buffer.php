@@ -182,14 +182,6 @@ class Buffer implements StreamInterface
     }
 
     /**
-     * Alias for {@see isWritable()}.
-     */
-    public function isWriteable(): bool
-    {
-        return $this->isWritable();
-    }
-
-    /**
      * Writes $string at the current cursor position, overwriting existing bytes.
      *
      * If the write extends past the end of the buffer, the buffer grows accordingly.

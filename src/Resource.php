@@ -139,14 +139,6 @@ abstract class Resource implements StreamInterface
     }
 
     /**
-     * Alias for {@see isWritable()}.
-     */
-    public function isWriteable(): bool
-    {
-        return $this->isWritable();
-    }
-
-    /**
      * Writes $string at the current cursor position and returns the bytes written.
      *
      * Invalidates the cached size so {@see getSize()} reflects the new length.
