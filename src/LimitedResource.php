@@ -1,5 +1,8 @@
 <?php
 
+declare(strict_types=1);
+
+
 namespace Shufflingpixels\IO;
 
 use InvalidArgumentException;
@@ -8,9 +11,7 @@ use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 use Shufflingpixels\IO\Exception\IOException;
 
-/**
- *
- */
+
 class LimitedResource implements StreamInterface
 {
     private int $position = 0;

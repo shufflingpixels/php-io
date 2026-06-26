@@ -1,5 +1,8 @@
 <?php
 
+declare(strict_types=1);
+
+
 namespace Shufflingpixels\IO;
 
 use InvalidArgumentException;
@@ -93,14 +96,14 @@ class BinaryReader
     {
         $value = $this->readUInt16LE();
 
-        return $value >= 0x8000 ? $value - 0x10000 : $value;
+        return $value >= 0x8000 ? $value - 0x1_0000 : $value;
     }
 
     public function readInt16BE(): int
     {
         $value = $this->readUInt16BE();
 
-        return $value >= 0x8000 ? $value - 0x10000 : $value;
+        return $value >= 0x8000 ? $value - 0x1_0000 : $value;
     }
 
     public function readUInt32LE(): int
@@ -117,13 +120,13 @@ class BinaryReader
     {
         $value = $this->readUInt32LE();
 
-        return $value >= 0x80000000 ? $value - 0x100000000 : $value;
+        return $value >= 0x8000_0000 ? $value - 0x1_0000_0000 : $value;
     }
 
     public function readInt32BE(): int
     {
         $value = $this->readUInt32BE();
 
-        return $value >= 0x80000000 ? $value - 0x100000000 : $value;
+        return $value >= 0x8000_0000 ? $value - 0x1_0000_0000 : $value;
     }
 }
