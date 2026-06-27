@@ -5,27 +5,19 @@ declare(strict_types=1);
 
 namespace Shufflingpixels\IO;
 
-use Psr\Http\Message\StreamInterface;
 use Shufflingpixels\IO\Exception\IOException;
 
 /**
- * Base PSR-7 stream implementation wrapping a PHP file resource.
- *
- * Concrete subclasses supply the resource and declare which capabilities
- * (seekable, readable, writable) are available for their use-case.
+ * A ReadWriteSeekerInterface implementation wrapping a PHP file resource.
  */
-abstract class Resource implements StreamInterface
+class Resource implements ReadWriteSeekerInterface
 {
-    protected ?int $size = null;
+    protected int $size = -1;
 
     /**
      * @param resource $resource
      */
-    protected function __construct(
-        protected mixed $resource,
-        protected bool $seekable,
-        protected bool $readable,
-        protected bool $writable)
+    protected function __construct(protected mixed $resource)
     {
     }
 
@@ -52,17 +44,13 @@ abstract class Resource implements StreamInterface
     }
 
     /**
-     * Returns the byte size of the stream, or null for non-seekable streams.
+     * Returns the total byte length of the stream.
      *
      * The result is cached after the first call and invalidated by any write.
      */
-    public function getSize(): ?int
+    public function length(): int
     {
-        if (!$this->isSeekable()) {
-            return null;
-        }
-
-        if ($this->size === null) {
+        if ($this->size < 0) {
             $pos = $this->tell();
             fseek($this->resource, 0, SEEK_END);
 
@@ -82,14 +70,6 @@ abstract class Resource implements StreamInterface
     }
 
     /**
-     * Returns whether this stream supports seeking.
-     */
-    public function isSeekable(): bool
-    {
-        return $this->seekable;
-    }
-
-    /**
      * Returns the current byte offset of the file cursor.
      */
     public function tell() : int
@@ -101,98 +81,55 @@ abstract class Resource implements StreamInterface
      * Moves the file cursor to the given position.
      *
      * @param int $whence SEEK_SET, SEEK_CUR, or SEEK_END
-     * @throws IOException if the stream is not seekable or the seek fails
+     * @throws IOException if the seek fails
      */
     public function seek(int $position, int $whence = SEEK_SET): void
     {
-        if (!$this->isSeekable()) {
-            throw new IOException("Unable to seek on a non-seekable stream");
-        }
-
         if (fseek($this->resource, $position, $whence) < 0) {
             throw new IOException("Unable to seek to the given position");
         }
     }
 
     /**
-     * Returns whether this stream supports reading.
-     */
-    public function isReadable(): bool
-    {
-        return $this->readable;
-    }
-
-    /**
      * Reads up to $length bytes from the current cursor position.
+     *
+     * Returns false when at end of file or on a read error.
      */
-    public function read(int $length): string
+    public function read(int $length): string|false
     {
-        return fread($this->resource, $length);
-    }
+        if ($this->eof()) {
+            return false;
+        }
 
-    /**
-     * Returns whether this stream supports writing.
-     */
-    public function isWritable(): bool
-    {
-        return $this->writable;
+        $result = fread($this->resource, $length);
+
+        return ($result === '' || $result === false) ? false : $result;
     }
 
     /**
      * Writes $string at the current cursor position and returns the bytes written.
      *
-     * Invalidates the cached size so {@see getSize()} reflects the new length.
+     * Invalidates the cached length so the next call to {@see length()} reflects the new size.
      *
-     * @throws IOException if the stream is not writable or the write fails
+     * @throws IOException if the write fails
      */
     public function write(string $string): int
     {
-        if (!$this->writable) {
-            throw new IOException("Stream is not writeable");
+        set_error_handler(static fn () => true);
+        
+        try {
+            $result = fwrite($this->resource, $string);
+        } finally {
+            restore_error_handler();
         }
 
-        $result = fwrite($this->resource, $string);
         if ($result === false) {
             throw new IOException("Failed to write to stream");
         }
 
-        $this->size = null;
+        // invalidate cached length
+        $this->size = -1;
+
         return $result;
-    }
-
-    /**
-     * Moves the cursor to the start of the stream.
-     */
-    public function rewind(): void
-    {
-        $this->seek(0);
-    }
-
-    /**
-     * Returns all bytes from the current cursor position to the end.
-     */
-    public function getContents(): string
-    {
-        return (string) stream_get_contents($this->resource);
-    }
-
-    /**
-     * Returns stream metadata, or a single key if $key is provided.
-     *
-     * Returns null for unknown keys.
-     */
-    public function getMetadata(?string $key = null): mixed
-    {
-        $data = stream_get_meta_data($this->resource);
-
-        return $key !== null ? $data[$key] ?? null : $data;
-    }
-
-    /**
-     * Returns all remaining stream contents as a string.
-     */
-    public function __toString(): string
-    {
-        return $this->getContents();
     }
 }

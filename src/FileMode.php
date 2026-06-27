@@ -17,19 +17,4 @@ enum FileMode : string
     case READ = 'r';
     case WRITE = 'w';
     case RW = 'r+';
-
-    public function seekable(): bool
-    {
-        return true;
-    }
-
-    public function readable(): bool
-    {
-        return $this === self::READ || $this === self::RW;
-    }
-
-    public function writable(): bool
-    {
-        return $this === self::WRITE || $this === self::RW;
-    }
 }

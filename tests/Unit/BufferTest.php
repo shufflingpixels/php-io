@@ -5,14 +5,12 @@ use Shufflingpixels\IO\Buffer;
 it('reads, seeks and tracks position', function () {
     $buffer = new Buffer('abcdef');
 
-    expect($buffer->getSize())->toBe(6)
+    expect($buffer->length())->toBe(6)
         ->and($buffer->tell())->toBe(0)
-        ->and($buffer->remaining())->toBe(6)
         ->and($buffer->eof())->toBeFalse();
 
     expect($buffer->read(2))->toBe('ab')
-        ->and($buffer->tell())->toBe(2)
-        ->and($buffer->remaining())->toBe(4);
+        ->and($buffer->tell())->toBe(2);
 
     $buffer->seek(-1, SEEK_END);
 
@@ -50,6 +48,13 @@ it('returns available bytes when reading beyond end of stream', function () {
         ->and($buffer->eof())->toBeTrue();
 });
 
+it('returns false when reading at end of stream', function () {
+    $buffer = new Buffer('a');
+    $buffer->read(1);
+
+    expect($buffer->read(1))->toBeFalse();
+});
+
 it('writes at current position and updates contents', function () {
     $buffer = new Buffer('abcdef');
     $buffer->seek(2);
@@ -67,14 +72,15 @@ it('writes nothing for empty payload', function () {
 
     expect($buffer->write(''))->toBe(0)
         ->and($buffer->tell())->toBe(0)
-        ->and($buffer->getSize())->toBe(3);
+        ->and($buffer->length())->toBe(3);
 });
 
-it('returns remaining contents and advances cursor', function () {
+it('reads remaining bytes from cursor to end', function () {
     $buffer = new Buffer('abcdef');
     $buffer->seek(2);
 
-    expect($buffer->getContents())->toBe('cdef')
-        ->and($buffer->tell())->toBe(6)
-        ->and($buffer->getContents())->toBe('');
+    $remaining = $buffer->read($buffer->length() - $buffer->tell());
+
+    expect($remaining)->toBe('cdef')
+        ->and($buffer->eof())->toBeTrue();
 });

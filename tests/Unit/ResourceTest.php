@@ -3,66 +3,90 @@
 use Shufflingpixels\IO\Exception\IOException;
 use Shufflingpixels\IO\Resource;
 
-it('reads, writes, seeks and reports stream state', function () {
-    $handle = fopen('php://temp', 'r+');
-    fwrite($handle, 'hello');
-    rewind($handle);
+function makeResource(string $mode = 'r+', string $initial = ''): Resource
+{
+    $handle = fopen('php://temp', $mode);
+    if ($initial !== '') {
+        fwrite($handle, $initial);
+        rewind($handle);
+    }
 
-    $stream = new class($handle, true, true, true) extends Resource {
-        public function __construct($resource, bool $seekable, bool $readable, bool $writeable)
-        {
-            parent::__construct($resource, $seekable, $readable, $writeable);
-        }
+    return new class($handle) extends Resource {
+        public function __construct(mixed $resource) { parent::__construct($resource); }
     };
+}
 
-    expect($stream->getSize())->toBe(5)
+it('reads, writes, seeks and reports length', function () {
+    $stream = makeResource('r+', 'hello');
+
+    expect($stream->length())->toBe(5)
         ->and($stream->tell())->toBe(0)
-        ->and($stream->isSeekable())->toBeTrue()
-        ->and($stream->isReadable())->toBeTrue()
-        ->and($stream->isWritable())->toBeTrue()
         ->and($stream->read(2))->toBe('he');
 
     $stream->seek(0);
     expect($stream->write('H'))->toBe(1);
 
     $stream->seek(0);
-    expect($stream->read(5))->toBe('Hello')
-        ->and($stream->getSize())->toBe(5)
-        ->and($stream->eof())->toBeFalse();
+    expect($stream->read(5))->toBe('Hello');
+});
 
-    $stream->read(1);
+it('length is recalculated after a write', function () {
+    $stream = makeResource('r+', 'abc');
+
+    expect($stream->length())->toBe(3);
+
+    $stream->seek(0, SEEK_END);
+    $stream->write('de');
+
+    expect($stream->length())->toBe(5);
+});
+
+it('eof is true only after reading past the end', function () {
+    $stream = makeResource('r+', 'ab');
+
+    expect($stream->eof())->toBeFalse();
+
+    $stream->read(3);
+
     expect($stream->eof())->toBeTrue();
-
-    $stream->close();
 });
 
-it('throws when seeking or getting length on non-seekable stream', function () {
-    $handle = fopen('php://temp', 'r+');
+it('returns false when reading at end of stream', function () {
+    $stream = makeResource('r+', 'ab');
+    $stream->read(3);
 
-    $stream = new class($handle, false, true, false) extends Resource {
-        public function __construct($resource, bool $seekable, bool $readable, bool $writeable)
-        {
-            parent::__construct($resource, $seekable, $readable, $writeable);
-        }
-    };
-
-    expect($stream->getSize())->toBeNull()
-        ->and(fn () => $stream->seek(0))->toThrow(IOException::class);
-
-    $stream->close();
+    expect($stream->read(1))->toBeFalse();
 });
 
-it('throws when writing to a non-writeable stream', function () {
-    $handle = fopen('php://temp', 'r+');
+it('seek throws IOException on failure', function () {
+    $stream = makeResource('r+', 'abc');
 
-    $stream = new class($handle, true, true, false) extends Resource {
-        public function __construct($resource, bool $seekable, bool $readable, bool $writeable)
-        {
-            parent::__construct($resource, $seekable, $readable, $writeable);
-        }
+    expect(fn () => $stream->seek(-999))->toThrow(IOException::class);
+});
+
+it('write throws IOException when the underlying fwrite fails', function () {
+    $handle = fopen('php://temp', 'r');
+    $stream = new class($handle) extends Resource {
+        public function __construct(mixed $resource) { parent::__construct($resource); }
     };
 
-    expect(fn () => $stream->write('x'))->toThrow(IOException::class, 'not writeable');
+    expect(fn () => $stream->write('x'))->toThrow(IOException::class);
+});
 
+it('close releases the resource', function () {
+    $stream = makeResource('r+', 'abc');
     $stream->close();
+
+    expect(fn () => $stream->read(1))->toThrow(\TypeError::class);
+});
+
+it('detach returns the underlying resource', function () {
+    $handle = fopen('php://temp', 'r+');
+    $stream = new class($handle) extends Resource {
+        public function __construct(mixed $resource) { parent::__construct($resource); }
+    };
+
+    $detached = $stream->detach();
+
+    expect($detached)->toBe($handle);
 });

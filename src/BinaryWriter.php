@@ -6,46 +6,19 @@ declare(strict_types=1);
 namespace Shufflingpixels\IO;
 
 use InvalidArgumentException;
-use Psr\Http\Message\StreamInterface;
 
 /**
- * Writes primitive binary types to a PSR-7 stream.
+ * Writes primitive binary types to a writer.
  *
  * Integer methods follow the naming convention write{Signedness}{Bits}{Endianness},
  * e.g. writeInt16LE for a signed 16-bit little-endian integer.
  *
- * All write methods return the number of bytes written, as forwarded from the stream.
+ * All write methods return the number of bytes written, as forwarded from the writer.
  */
 class BinaryWriter
 {
-    public function __construct(protected StreamInterface $stream)
+    public function __construct(protected WriterInterface $w)
     {
-    }
-
-    /**
-     * Returns the current byte offset of the stream cursor.
-     */
-    public function tell(): int
-    {
-        return $this->stream->tell();
-    }
-
-    /**
-     * Moves the stream cursor to the given position.
-     *
-     * @param int $whence SEEK_SET, SEEK_CUR, or SEEK_END
-     */
-    public function seek(int $position, int $whence = SEEK_SET): void
-    {
-        $this->stream->seek($position, $whence);
-    }
-
-    /**
-     * Writes raw bytes to the stream.
-     */
-    public function write(string $data): int
-    {
-        return $this->stream->write($data);
     }
 
     /**
@@ -53,7 +26,7 @@ class BinaryWriter
      */
     public function writeUInt8(int $value): int
     {
-        return $this->write(\chr($value & 0xff));
+        return $this->w->write(\chr($value & 0xff));
     }
 
     /**
@@ -69,7 +42,7 @@ class BinaryWriter
      */
     public function writeUInt16LE(int $value): int
     {
-        return $this->write(\pack('v', $value));
+        return $this->w->write(\pack('v', $value));
     }
 
     /**
@@ -77,7 +50,7 @@ class BinaryWriter
      */
     public function writeUInt16BE(int $value): int
     {
-        return $this->write(\pack('n', $value));
+        return $this->w->write(\pack('n', $value));
     }
 
     /**
@@ -101,7 +74,7 @@ class BinaryWriter
      */
     public function writeUInt32LE(int $value): int
     {
-        return $this->write(\pack('V', $value));
+        return $this->w->write(\pack('V', $value));
     }
 
     /**
@@ -109,7 +82,7 @@ class BinaryWriter
      */
     public function writeUInt32BE(int $value): int
     {
-        return $this->write(\pack('N', $value));
+        return $this->w->write(\pack('N', $value));
     }
 
     /**
@@ -142,6 +115,6 @@ class BinaryWriter
             throw new InvalidArgumentException('pad_char must be exactly one byte');
         }
 
-        return $this->write(\substr(\str_pad($data, $length, $pad_char), 0, $length));
+        return $this->w->write(\substr(\str_pad($data, $length, $pad_char), 0, $length));
     }
 }

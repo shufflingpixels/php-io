@@ -7,9 +7,7 @@ namespace Shufflingpixels\IO;
 
 use Shufflingpixels\IO\Exception\IOException;
 
-/**
- * A PSR-7 stream backed by a file on disk, opened via {@see FileMode}.
- */
+/** A file-backed stream opened via {@see FileMode}. */
 class File extends Resource
 {
     /**
@@ -31,11 +29,6 @@ class File extends Resource
             throw new IOException("Unable to open file");
         }
 
-        return new self(
-            $fd,
-            $mode->seekable(),
-            $mode->readable(),
-            $mode->writable()
-        );
+        return new self($fd);
     }
 }

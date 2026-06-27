@@ -6,60 +6,18 @@ declare(strict_types=1);
 namespace Shufflingpixels\IO;
 
 use InvalidArgumentException;
-use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 
 /**
- * Reads primitive binary types from a PSR-7 stream.
+ * Reads primitive binary types from a reader.
  *
  * Integer methods follow the naming convention read{Signedness}{Bits}{Endianness},
  * e.g. readInt16LE for a signed 16-bit little-endian integer.
  */
 class BinaryReader
 {
-    public function __construct(protected StreamInterface $stream)
+    public function __construct(protected ReaderInterface $r)
     {
-    }
-
-    /**
-     * Returns the total byte length of the stream.
-     *
-     * @throws \RuntimeException if the stream size is not known
-     */
-    public function length() : int
-    {
-        $size = $this->stream->getSize();
-        if ($size === null) {
-            throw new RuntimeException('Stream size is not known');
-        }
-
-        return $size;
-    }
-
-    /**
-     * Returns the current byte offset of the stream cursor.
-     */
-    public function tell() : int
-    {
-        return $this->stream->tell();
-    }
-
-    /**
-     * Returns true when the cursor is at the end of the stream.
-     */
-    public function eof() : bool
-    {
-        return $this->stream->eof();
-    }
-
-    /**
-     * Moves the stream cursor to the given position.
-     *
-     * @param int $whence SEEK_SET, SEEK_CUR, or SEEK_END
-     */
-    public function seek(int $position, int $whence = SEEK_SET): void
-    {
-        $this->stream->seek($position, $whence);
     }
 
     /**
@@ -68,16 +26,17 @@ class BinaryReader
      * @throws \InvalidArgumentException if $length is negative
      * @throws \RuntimeException if the stream returns fewer bytes than requested
      */
-    public function read(int $length): string
+    public function readExact(int $length): string
     {
         if ($length < 0) {
             throw new InvalidArgumentException('Length must be >= 0');
         }
 
-        $data = $this->stream->read($length);
-        if (\strlen($data) !== $length) {
+        $data = $this->r->read($length);
+        $got = $data === false ? 0 : \strlen($data);
+        if ($got !== $length) {
             throw new RuntimeException(
-                "Not enough bytes to read {$length} byte(s), " . \strlen($data) . ' read'
+                "Not enough bytes to read {$length} byte(s), {$got} read"
             );
         }
 
@@ -89,7 +48,7 @@ class BinaryReader
      */
     public function readUInt8(): int
     {
-        return \ord($this->read(1));
+        return \ord($this->readExact(1));
     }
 
     /**
@@ -107,7 +66,7 @@ class BinaryReader
      */
     public function readUInt16LE(): int
     {
-        return \unpack('v', $this->read(2))[1];
+        return \unpack('v', $this->readExact(2))[1];
     }
 
     /**
@@ -115,7 +74,7 @@ class BinaryReader
      */
     public function readUInt16BE(): int
     {
-        return \unpack('n', $this->read(2))[1];
+        return \unpack('n', $this->readExact(2))[1];
     }
 
     /**
@@ -143,7 +102,7 @@ class BinaryReader
      */
     public function readUInt32LE(): int
     {
-        return \unpack('V', $this->read(4))[1];
+        return \unpack('V', $this->readExact(4))[1];
     }
 
     /**
@@ -151,7 +110,7 @@ class BinaryReader
      */
     public function readUInt32BE(): int
     {
-        return \unpack('N', $this->read(4))[1];
+        return \unpack('N', $this->readExact(4))[1];
     }
 
     /**
@@ -181,7 +140,7 @@ class BinaryReader
      */
     public function readPaddedString(int $length, string $pad_chars = "\x00") : string
     {
-        $data = $this->read($length);
+        $data = $this->readExact($length);
         return rtrim($data, $pad_chars);
     }
 }

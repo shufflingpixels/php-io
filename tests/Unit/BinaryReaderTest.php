@@ -2,51 +2,32 @@
 
 use Shufflingpixels\IO\BinaryReader;
 use Shufflingpixels\IO\Buffer;
-
-it('proxies length tell eof and seek', function () {
-    $reader = new BinaryReader(new Buffer('abcd'));
-
-    expect($reader->length())->toBe(4)
-        ->and($reader->tell())->toBe(0)
-        ->and($reader->eof())->toBeFalse();
-
-    $reader->seek(2);
-    expect($reader->tell())->toBe(2)
-        ->and($reader->read(1))->toBe('c');
-
-    $reader->seek(-1, SEEK_END);
-    expect($reader->read(1))->toBe('d')
-        ->and($reader->eof())->toBeTrue();
-});
+use Shufflingpixels\IO\ReaderInterface;
 
 it('throws for negative read length', function () {
     $reader = new BinaryReader(new Buffer('abc'));
 
-    expect(fn () => $reader->read(-1))->toThrow(InvalidArgumentException::class);
+    expect(fn () => $reader->readExact(-1))->toThrow(InvalidArgumentException::class);
 });
 
 it('throws when stream returns fewer bytes than requested', function () {
-    $stream = new class implements \Psr\Http\Message\StreamInterface {
-        public function __toString(): string { return ''; }
-        public function close(): void {}
-        public function detach(): mixed { return null; }
-        public function getSize(): ?int { return 0; }
-        public function eof(): bool { return false; }
-        public function isSeekable(): bool { return false; }
-        public function seek(int $position, int $whence = SEEK_SET): void {}
-        public function rewind(): void {}
-        public function tell(): int { return 0; }
-        public function isWritable(): bool { return false; }
-        public function write(string $string): int { return 0; }
-        public function isReadable(): bool { return true; }
-        public function read(int $length): string { return 'x'; }
-        public function getContents(): string { return ''; }
-        public function getMetadata(?string $key = null): mixed { return null; }
+    $stream = new class implements ReaderInterface {
+        public function read(int $length): string|false { return 'x'; }
     };
 
-    $reader = new BinaryReader(new Buffer($stream));
+    $reader = new BinaryReader($stream);
 
-    expect(fn () => $reader->read(2))->toThrow(RuntimeException::class, 'Not enough bytes');
+    expect(fn () => $reader->readExact(2))->toThrow(RuntimeException::class, 'Not enough bytes');
+});
+
+it('throws when stream returns false', function () {
+    $stream = new class implements ReaderInterface {
+        public function read(int $length): string|false { return false; }
+    };
+
+    $reader = new BinaryReader($stream);
+
+    expect(fn () => $reader->readExact(1))->toThrow(RuntimeException::class, 'Not enough bytes');
 });
 
 it('reads 8 bit integers', function () {
@@ -98,7 +79,7 @@ it('advances the cursor by the full field length after readPaddedString', functi
 
     $reader->readPaddedString(4);
 
-    expect($reader->read(3))->toBe('end');
+    expect($reader->readExact(3))->toBe('end');
 });
 
 it('throws when not enough bytes remain for readPaddedString', function () {
